@@ -58,7 +58,7 @@ const credentialsPresent = ({body}, response) =>
   return true
 }
 
-const handleResult = (response, errorMessage) => success => (err, results) =>
+const handleResult = (response, errorMessage = "Unable to perform DB operation") => success => (err, results) =>
 {
   if (err)
   {
@@ -75,8 +75,8 @@ app.post("/login", (request, response) =>
 
   if (credentialsPresent(request, response))
   {
-    database.collection(USERS_COLLECTION).find({username, password})
-      .toArray(handleResult(response, "Something went wrong")(({length}) =>
+    database.collection(USERS_COLLECTION).find({username, password}).limit(1)
+      .toArray(handleResult(response)(({length}) =>
       {
         if (length > 0)
         {
@@ -96,12 +96,21 @@ app.post("/register", (request, response) =>
   if (credentialsPresent(request, response))
   {
 
-    runAsync.callbacks(() => response.status(500).json({error: "Unable to register user"}))(function* (callback)
-    {
-      yield database.collection(USERS_COLLECTION).insertOne({username, password}, callback)
-      yield database.collection(TODO_LIST_COLLECTION).insertOne({username}, callback)
+    Promise.all([
+      database.collection(USERS_COLLECTION).insertOne({username, password}),
+      database.collection(TODO_LIST_COLLECTION).insertOne({username, tasks: []})
+    ]).then(() => {
       response.status(200).json({message: "Successfully registered user."})
+    }).catch(() => {
+      response.status(500).json({error: "Unable to register user"})
     })
+
+    // runAsync.callbacks(() => response.status(500).json({error: "Unable to register user"}))(function* (callback)
+    // {
+    //   yield database.collection(USERS_COLLECTION).insertOne({username, password}, callback)
+    //   yield database.collection(TODO_LIST_COLLECTION).insertOne({username, tasks: []}, callback)
+    //   response.status(200).json({message: "Successfully registered user."})
+    // })
 
     // database.collection(USERS_COLLECTION).insertOne({username, password},
     //   handleResult(response, "Unable to register user.")(() =>
@@ -142,17 +151,20 @@ app.route("/list")
   {
     const {username} = request
 
-    database.collection(TODO_LIST_COLLECTION).find({username}).toArray(
-      handleResult(response, "Unable to fetch todo list")(docs =>
+    database.collection(TODO_LIST_COLLECTION).find({username}).limit(1).toArray(
+      handleResult(response, "Unable to fetch the todo list")(docs =>
       {
-        response.json({username})
+        response.json({username, tasks: docs[0].tasks})
       }))
   })
   .post((request, response) =>
   {
     const {username, body: {task}} = request
 
-
+    database.collection(TODO_LIST_COLLECTION).updateOne({username}, {$push: {tasks: task}},
+      handleResult(response, "Unable to add to the todo list")(() => {
+        response.json({username, task})
+      }))
   })
 
 mongoClient.connect(MONGO_DB_URL, (err, db) =>
