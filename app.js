@@ -4,8 +4,6 @@ const mongoClient = require("mongodb").MongoClient
 const http = require("http")
 const path = require("path")
 
-const { runAsync } = require("./helpers")
-
 const PORT = 8000
 const USERS_COLLECTION = "users"
 const TODO_LIST_COLLECTION = "todo-list-items"
@@ -36,7 +34,14 @@ const userTokens = (() =>
 
   const getUsername = tokenToUserMap.get.bind(tokenToUserMap)
 
-  return {addUser, getUsername}
+  const removeUser = username =>
+  {
+    const token = userToTokenMap.get(username)
+    userToTokenMap.delete(username)
+    tokenToUserMap.delete(token)
+  }
+
+  return {addUser, removeUser, getUsername}
 
 })()
 
@@ -144,6 +149,12 @@ app.route("/*").all((request, response, next) =>
       next()
     }
   }
+})
+
+app.get("/logout", ({username}, response) =>
+{
+  userTokens.removeUser(username)
+  response.json({message: "Successfully logged out", username})
 })
 
 app.route("/list")
