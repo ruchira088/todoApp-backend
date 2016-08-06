@@ -10,6 +10,17 @@ const TODO_LIST_COLLECTION = "todo-list-items"
 const MONGO_DB_URL = "mongodb://localhost:27017/todo-list"
 
 const app = express()
+
+const generateToken = (strength = 2, output = "") =>
+{
+  if (strength === 0)
+  {
+    return output
+  }
+
+  return generateToken(strength - 1, output + Math.random().toString(36).substring(2))
+}
+
 const userTokens = (() =>
 {
   const userToTokenMap = new Map()
@@ -21,7 +32,7 @@ const userTokens = (() =>
 
     if (!userToken)
     {
-      const token = Math.random().toString(36).substring(2)
+      const token = generateToken()
 
       userToTokenMap.set(username, token)
       tokenToUserMap.set(token, username)
@@ -104,9 +115,11 @@ app.post("/register", (request, response) =>
     Promise.all([
       database.collection(USERS_COLLECTION).insertOne({username, password}),
       database.collection(TODO_LIST_COLLECTION).insertOne({username, tasks: []})
-    ]).then(() => {
+    ]).then(() =>
+    {
       response.status(200).json({message: "Successfully registered user."})
-    }).catch(() => {
+    }).catch(() =>
+    {
       response.status(500).json({error: "Unable to register user"})
     })
 
@@ -172,10 +185,34 @@ app.route("/list")
   {
     const {username, body: {task}} = request
 
-    database.collection(TODO_LIST_COLLECTION).updateOne({username}, {$push: {tasks: task}},
-      handleResult(response, "Unable to add to the todo list")(() => {
-        response.json({username, task})
+    const todoItem = {
+      id: generateToken(1),
+      task
+    }
+
+    database.collection(TODO_LIST_COLLECTION).updateOne({username}, {$push: {tasks: todoItem}},
+      handleResult(response, "Unable to add to the todo list")(() =>
+      {
+        response.json({username, todoItem})
       }))
+  })
+  .put((request, response) =>
+  {
+    const {username, body: {task, id}} = request
+
+    database.collection(TODO_LIST_COLLECTION)
+      .updateOne({username, "tasks.id": id}, {$set: {"tasks.$.task": task}},
+        handleResult(response, "Unable to update task")(({result: {n}}) =>
+        {
+          if(n == 1)
+          {
+            response.json({username, todoItem: {id, task}})
+          } else
+          {
+            response.status(400).json({error: `task with id "${id}" NOT found.`})
+          }
+        })
+      )
   })
 
 mongoClient.connect(MONGO_DB_URL, (err, db) =>
