@@ -1,6 +1,7 @@
 const express = require("express")
 const bodyParser = require("body-parser")
 const mongoClient = require("mongodb").MongoClient
+const moment = require("moment")
 const http = require("http")
 const path = require("path")
 
@@ -142,7 +143,7 @@ app.post("/register", (request, response) =>
   }
 })
 
-app.route("/*").all((request, response, next) =>
+app.use((request, response, next) =>
 {
   const token = request.get("token")
 
@@ -181,12 +182,23 @@ app.route("/list")
         response.json({username, tasks: docs[0].tasks})
       }))
   })
+  .all(({body: {dueDate}}, response, next) => {
+    if(dueDate && !moment(dueDate, moment.ISO_8601).isValid())
+    {
+      response.status(400)
+        .json({error: "Date time format is NOT valid. Plese use the ISO 8601 date time format."})
+    } else
+    {
+      next()
+    }
+  })
   .post((request, response) =>
   {
-    const {username, body: {task}} = request
+    const {username, body: {task, dueDate}} = request
 
     const todoItem = {
       id: generateToken(1),
+      dueDate,
       task
     }
 
