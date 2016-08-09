@@ -4,7 +4,7 @@ const moment = require("moment")
 const {handleResult, generateToken, getNonNullValuesObject} = require("../utils")
 const {TODO_LIST_COLLECTION} = require("../constants")
 
-const createNewTask = ({id, task, progress, dueDate}) => ({
+const createNewTask = ({id, task, progress = 0, dueDate}) => ({
     id,
     task,
     progress,
@@ -66,8 +66,15 @@ const route = database =>
         })
         .patch(({username, body}, response) =>
         {
-            // TODO Fix the patch request behaviour
-            updateTask(response)({username, id: body.id})(getNonNullValuesObject(createNewTask(body)))
+            database.collection(TODO_LIST_COLLECTION).find({username}, {tasks: {$elemMatch: {id: body.id}}}).limit(1).toArray(
+                handleResult(response, "Unable to update task.")(([document]) =>
+                {
+                    const [task] = document.tasks
+
+                    const modifiedObject = Object.assign({}, createNewTask(task), getNonNullValuesObject(createNewTask(body)))
+                    updateTask(response)({username, id: body.id})(modifiedObject)
+                })
+            )
         })
 
     return router
