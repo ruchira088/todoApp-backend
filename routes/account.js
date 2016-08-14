@@ -89,7 +89,7 @@ const route = database =>
                     database.collection(TODO_LIST_COLLECTION).insertOne({username, tasks: []})
                 ]).then(() =>
                 {
-                    response.status(200).json({message: "Successfully registered user."})
+                    response.status(200).json({message: "Successfully registered user.", token: userTokens.addUser(username)})
                 }).catch(() =>
                 {
                     response.status(500).json({error: "Unable to register user"})
