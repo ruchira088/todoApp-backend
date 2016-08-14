@@ -60,11 +60,7 @@ const route = database =>
     {
       const {username, body: {task, dueDate}} = request
 
-      const todoItem = {
-        id: generateToken(1),
-        dueDate,
-        task
-      }
+      const todoItem = createNewTask({ id: generateToken(1), dueDate, task })
 
       database.collection(TODO_LIST_COLLECTION).updateOne({username}, {$push: {tasks: todoItem}},
         handleResult(response, "Unable to create task.")(() =>
