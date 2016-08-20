@@ -9,7 +9,6 @@ const route = database =>
     .get("/:resourceId/:fileName",
       ({params: {resourceId, fileName}}, response) =>
       {
-
         database.collection(RESOURCE_COLLECTION).find({resourceId, fileName}).limit(1).toArray()
           .then(([resource]) =>
           {
@@ -28,7 +27,7 @@ const route = database =>
       })
 
   router
-    .get("/", (request, response) => response.status(404).send())
+    .all("/*", (request, response) => response.status(404).send())
 
   return router
 }
