@@ -6,6 +6,7 @@ const http = require("http")
 
 const {PORT, MONGO_DB_URL} = require("./constants")
 
+const resourceRoute = require("./routes/resources")
 const listRoute = require("./routes/list")
 const taskRoute = require("./routes/task")
 const accountRoute = require("./routes/account")
@@ -24,6 +25,7 @@ mongoClient.connect(MONGO_DB_URL, (err, db) =>
     {
         console.log("Successfully connected to the database.")
 
+        app.use("/resources", resourceRoute(db))
         app.use("/", accountRoute(db))
         app.use("/list", listRoute(db))
         app.use("/task", taskRoute(db))
