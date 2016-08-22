@@ -4,7 +4,7 @@ const mongoClient = require("mongodb").MongoClient
 const moment = require("moment")
 const http = require("http")
 
-const {PORT, MONGO_DB_URL} = require("./constants")
+const {PORT, MONGO_DB_URL, ROUTES: {ROOT, RESOURCES, LIST, TASK}} = require("./constants")
 
 const resourceRoute = require("./routes/resources")
 const listRoute = require("./routes/list")
@@ -25,10 +25,10 @@ mongoClient.connect(MONGO_DB_URL, (err, db) =>
     {
         console.log("Successfully connected to the database.")
 
-        app.use("/resources", resourceRoute(db))
-        app.use("/", accountRoute(db))
-        app.use("/list", listRoute(db))
-        app.use("/task", taskRoute(db))
+        app.use(RESOURCES, resourceRoute(db))
+        app.use(ROOT, accountRoute(db))
+        app.use(LIST, listRoute(db))
+        app.use(TASK, taskRoute(db))
 
         http.createServer(app)
             .listen(PORT, () => console.log(`Server is listening on port: ${PORT}`))
